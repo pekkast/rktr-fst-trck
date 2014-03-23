@@ -2,36 +2,38 @@
 <html>
 <head>
     <title>Devaaja fast track - Out Run</title>
+    <meta charset="utf-8" />
     <style>
     #result {
         text-align: center;
         color: #ccc;
     }
-    #result strong {
-        color: green;
-    }
     #stats p:before {
         content: 'tykkäyksien maksimisumma: ';
     }
-    #stats p em {
+    #result em, #stats em {
         color: green;
-        font-size: 2em;
         font-style: normal;
+        font-weight: bold;
+    }
+    #stats em {
+        font-size: 1.5em;
     }
     </style>
 </head>
 <body>
     <h1>Anna reittitiedosto tai käytä demodataa</h1>
-    <label for="file">Lataan oman</label><input type="file" id="file" name="file" /><br />
+    <label for="file">Lataan oman</label><br />
+    <input type="file" id="file" name="file" /><br />
     <button id="demo">Tahtoo demon</button>
     <div id="stats"></div>
     <pre id="result"></pre>
 <script>
-// Check for the File API support.
-if (!window.File || !window.FileReader) 
-    alert('The File API is not supported in this browser.');
+(function(doc, root) {
+    // Check for the File API support.
+    if (!root.File || !root.FileReader) 
+        return alert('The File API is not supported in this browser.');
 
-(function() {
     // Get the index of greater value 
     var getMaxIndex = function(item1, item2) {
         return 1 * (item2 > item1);
@@ -41,12 +43,13 @@ if (!window.File || !window.FileReader)
     var calculatePathMaxSum = function(tree) {
         var tot = tree.length, 
             row = tree[tot - 1].split(' '),
-            i, prev, j, len, ind, path;
+            len = row.length,
+            i, prev, j, ind, path;
 
         // Process first, i.e. the bottom row
-        for (j = 0; j < row.length; j++) {
+        for (j = 0; j < len; j++) {
             row[j] = {
-                value : ~~row[j],
+                value : ~~row[j], // ensure int
                 path : [j]
             };
         }
@@ -54,14 +57,19 @@ if (!window.File || !window.FileReader)
         // Loop through rows from bottom to top
         for (i = tot - 2; i >= 0; i--) {
             prev = row;
+            // Row items to array
             row = tree[i].split(' '); 
             len = row.length;
 
+            // Get max sum for each
             for (j = 0; j < len; j++) {
+                // Get index for larger value
                 ind = getMaxIndex(prev[j].value, prev[j + 1].value);
-                // Get a copy of previous path
+                // Get a copy of previous path respectively
                 path = prev[j + ind].path.slice();
+                // Add current index to path
                 path.unshift(j);
+                // Save results
                 row[j] = {
                     value : ~~row[j] + prev[j + ind].value,
                     path : path
@@ -69,15 +77,15 @@ if (!window.File || !window.FileReader)
             }
         }
 
+        // At the end (top) we have only one item
         return row[0];
     };
 
     // Visualize path
-    var printPyramid = function(tree, path, node) {
-        var resultEl = document.getElementById(node),
-            // Join tree to single string
+    var printPyramid = function(tree, path, elem) {
+            // Join tree into a simple string
             // Add whitespace padding for single digits
-            raw = tree.join("\n")
+        var raw = tree.join("\n")
                 .replace(/(\s)(\d)(\s)/g, '$1 $2$3')
                 .replace(/(\d)(\s)(\d)(\s)/g, '$1$2 $3$4'),
             html = [],
@@ -87,24 +95,25 @@ if (!window.File || !window.FileReader)
 
         // Go through full path from top to bottom
         for (var i = 0; i < path.length; i++) {
-            // Solve the index of next digit in string that is left
+            // Solve the index of next digit in the unprocessed string
             index = left + path[i] + 1;
-            // Save info of digits on row after chosen one
+            // Save amount of digits on row after the chosen one
             left = i - path[i];
             pattern = new RegExp('(([0-9]+)(\\s+)){' + index + '}');
             match = raw.match(pattern);
-            // Add matched part to html array chosen digit surrounded by strong tag
-            html.push(match[0].replace(new RegExp(match[1] + '$'), '<strong>' + match[1] + '</strong>'));
+            // Add matched part to html array chosen digit surrounded by em tag
+            html.push(match[0].replace(
+                new RegExp(match[1] + '$'), '<em>' + match[1] + '</em>'
+            ));
             // Remove matched part from the raw string
             raw = raw.replace(pattern, '');
         }
 
         // Show pyramid
-        resultEl.innerHTML = html.join('') + raw;
+        elem.innerHTML = html.join('') + raw;
 
-        // Fix the pyramid width (exeeds window width)
-        if (resultEl.offsetWidth < resultEl.scrollWidth)
-            resultEl.style.width = resultEl.scrollWidth + 'px';
+        // Fix the pyramid width (if exeeds window width)
+        elem.style.width = elem.scrollWidth + 'px';
     };
 
     var doTheThing = function(data) {
@@ -113,10 +122,10 @@ if (!window.File || !window.FileReader)
             result = calculatePathMaxSum(tree);
 
         // Print details & result
-        document.getElementById('stats').innerHTML = '<h2>' + seed + '</h2><p><em>' + result.value + '</em></p>';
+        doc.getElementById('stats').innerHTML = '<h2>' + seed + '</h2><p><em>' + result.value + '</em></p>';
 
-        // Visualize
-        printPyramid(tree, result.path, 'result');
+        // Visualize path
+        printPyramid(tree, result.path, doc.getElementById('result'));
     };
 
     var handleFileSelect = function(evt) {
@@ -137,13 +146,13 @@ if (!window.File || !window.FileReader)
     };
 
     var handleDemo = function() {
-        doTheThing(document.getElementById('demo-data').textContent);
+        doTheThing(doc.getElementById('demo-data').textContent);
     };
 
-    document.getElementById('file').addEventListener('change', handleFileSelect, false);
-    document.getElementById('demo').addEventListener('click', handleDemo, false);
+    doc.getElementById('file').addEventListener('change', handleFileSelect, false);
+    doc.getElementById('demo').addEventListener('click', handleDemo, false);
 
-})();
+})(document, window);
 </script>
 <pre id="demo-data" style="display:none;">
 # seed: 1428359364
